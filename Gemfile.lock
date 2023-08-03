@@ -1,0 +1,15 @@
+GEM
+  remote: https://rubygems.org/
+  specs:
+    sequel (5.71.0)
+    sqlite3 (1.6.3-x86_64-linux)
+
+PLATFORMS
+  x86_64-linux
+
+DEPENDENCIES
+  sequel (~> 5.71)
+  sqlite3 (~> 1.6)
+
+BUNDLED WITH
+   2.4.17
