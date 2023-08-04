@@ -5,6 +5,8 @@ Sequel.sqlite('db/bank_system.db')
 
 require_relative 'models/client'
 require_relative 'models/account'
+require_relative 'models/transfer'
+require_relative 'models/personal_transaction'
 require_relative 'helpers/validate_answer'
 require_relative 'helpers/generate_account_number'
 
@@ -29,8 +31,8 @@ loop do
   puts '. Generate statement'
   puts '-------------------------------'
   puts 'PERSONAL TRANSACTIONS'
-  puts '. Make deposit'
-  puts '. Withdraw money'
+  puts '9. Make deposit'
+  puts '10. Withdraw money'
   puts '-------------------------------'
   puts 'TRANSFERS'
   puts '. Make Transfer'
@@ -239,8 +241,8 @@ loop do
     account = Account.find(number:)
     
     1.times do
-      break puts 'No account with given number ' if account.nil?
-      break puts "A client's Main Account cannot be deleted" if account.name == 'Main Account'
+      break puts 'No account with given number. ' if account.nil?
+      break puts "A client's Main Account cannot be renamed." if account.name == 'Main Account'
       
       puts "Account #{format_account_number(number)} - #{account.name} of #{account.client.full_name}"
       puts "BALANCE: R$#{account.balance}"
@@ -257,7 +259,7 @@ loop do
       account.save
       puts "Account updated successfully!"
     end
-  when 7
+  when 7 #DELETE ACCOUNT
     puts "DELETING ACCOUNT (type 'list' to view registered accounts)"
     print 'Enter the account number (only numbers): '
     number = gets.strip.downcase
@@ -296,6 +298,46 @@ loop do
       end
       account.delete
       puts "Account deleted successfully!"
+    end
+  when 9 #MAKE DEPOSIT
+    personal_transaction = PersonalTransaction.new
+    personal_transaction.transaction_type = 'deposit'
+
+    puts "MAKING DEPOSIT (type 'list' to view registered accounts)"
+    print 'Enter the account number (only numbers): '
+    number = gets.strip.downcase
+    if number == 'list'
+      puts '-------------------------------'
+      list_accounts
+      puts '-------------------------------'
+      print "Enter the account number (only numbers): "
+      number = gets.strip
+    end
+
+    account = Account.find(number:)
+    
+    1.times do
+      break puts 'No account with given number. ' if account.nil?
+      
+      personal_transaction.account_id = account.id
+      puts "Account #{format_account_number(number)} - #{account.name} of #{account.client.full_name}"
+      puts "BALANCE: R$#{account.balance}"
+      print "\nDeposit value: "
+      amount = gets.strip.to_f
+
+      break puts "The deposit value must be greater than 0." if amount <= 0
+
+      puts "\nConfirm deposit? (Press ENTER to confirm or type 0 to cancel)"
+      print " -> "
+      answer = gets.strip
+      break puts 'Deposit canceled' if answer == '0'
+
+      new_balance = account.balance + amount
+      account.update(balance: new_balance)
+
+      personal_transaction.amount = amount
+      personal_transaction.save
+      puts "Deposit of R$#{amount} made successfully!"
     end
   when 99
     puts 'System shutting down...'
