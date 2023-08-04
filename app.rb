@@ -25,7 +25,7 @@ loop do
   puts '4. Create new account'
   puts '5. Show account balance'
   puts '6. Edit account name'
-  puts '. Delete account'
+  puts '7. Delete account'
   puts '. Generate statement'
   puts '-------------------------------'
   puts 'PERSONAL TRANSACTIONS'
@@ -240,7 +240,7 @@ loop do
     
     1.times do
       break puts 'No account with given number ' if account.nil?
-      break puts "You cannot rename a client's Main Account." if account.name == 'Main Account'
+      break puts "A client's Main Account cannot be deleted" if account.name == 'Main Account'
       
       puts "Account #{format_account_number(number)} - #{account.name} of #{account.client.full_name}"
       puts "BALANCE: R$#{account.balance}"
@@ -248,6 +248,7 @@ loop do
       account.name = gets.strip
 
       puts "\nConfirm account edition? (Press ENTER to confirm or type 0 to cancel)"
+      print " -> "
       answer = gets.strip
       break puts 'Edition canceled' if answer == '0'
 
@@ -255,6 +256,46 @@ loop do
       #TO-DO: Validate account unique name for current client
       account.save
       puts "Account updated successfully!"
+    end
+  when 7
+    puts "DELETING ACCOUNT (type 'list' to view registered accounts)"
+    print 'Enter the account number (only numbers): '
+    number = gets.strip.downcase
+    if number == 'list'
+      puts '-------------------------------'
+      list_accounts
+      puts '-------------------------------'
+      print "Enter the account number (only numbers): "
+      number = gets.strip
+    end
+
+    account = Account.find(number:)
+    
+    1.times do
+      break puts 'No account with given number ' if account.nil?
+      break puts "A client's Main Account cannot be deleted" if account.name == 'Main Account'
+      
+      puts "Account #{format_account_number(number)} - #{account.name} of #{account.client.full_name}"
+      puts "BALANCE: R$#{account.balance}"
+
+      puts "\nDeleting this account will transfer all of its balance to #{account.client.full_name}'s Main Account."
+      puts "Confirm account edition? (Press ENTER to confirm or type 0 to cancel)"
+      print ' -> '
+      answer = gets.strip
+      break puts 'Deletion canceled' if answer == '0'
+
+      #Select Main Account of the client that owns the account being deleted
+      main_account = account.client.accounts.find{|account| account.name == 'Main Account'}
+
+      if account.balance > 0
+        Transfer.create(
+          origin_account_id: main_account.id,
+          destination_account_id: account.id,
+          amount: account.balance
+        )
+      end
+      account.delete
+      puts "Account deleted successfully!"
     end
   when 99
     puts 'System shutting down...'
