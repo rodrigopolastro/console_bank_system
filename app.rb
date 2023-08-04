@@ -24,10 +24,9 @@ loop do
   puts '3. List all accounts'
   puts '4. Create new account'
   puts '5. Show account balance'
-  puts '. Generate statement'
-  puts '. Create account'
-  puts '. Edit account'
+  puts '6. Edit account name'
   puts '. Delete account'
+  puts '. Generate statement'
   puts '-------------------------------'
   puts 'PERSONAL TRANSACTIONS'
   puts '. Make deposit'
@@ -39,7 +38,7 @@ loop do
   puts '99. Exit'
   puts '-------------------------------'
   print 'Enter the desired option: '
-  option = gets.chomp.to_i
+  option = gets.strip.to_i
 
   system("clear")
 
@@ -95,7 +94,7 @@ loop do
     client = Client.new
 
     print 'Is this client a natural person? [y/n] '
-    answer = gets.chomp
+    answer = gets.strip
 
     #Loop to exit form for invalid input
     1.times do
@@ -112,21 +111,21 @@ loop do
         break #Break internal loop, not the application's loop
       end
 
-      client.full_name = gets.chomp
+      client.full_name = gets.strip
       print "#{client.document_type} (only numbers): "
-      client.document = gets.chomp
+      client.document = gets.strip
       print 'Phone number (only numbers): '
-      client.phone = gets.chomp
+      client.phone = gets.strip
       print 'CEP (only numbers): '
-      client.zipcode = gets.chomp
+      client.zipcode = gets.strip
       print 'Federal State: '
-      client.federal_state = gets.chomp
+      client.federal_state = gets.strip
       print 'City: '
-      client.city = gets.chomp
+      client.city = gets.strip
       print 'District: '
-      client.district = gets.chomp
+      client.district = gets.strip
       print 'Public Area: '
-      client.public_area = gets.chomp
+      client.public_area = gets.strip
 
       if(GENERATE_SAMPLE_PHONE)
         client.phone = SAMPLE_PHONE
@@ -142,8 +141,8 @@ loop do
 
       puts "\nConfirm client creation?"
       print '(Press ENTER to confirm or type 0 to cancel) -> '
-      answer = gets.chomp
-      break if answer == 0
+      answer = gets.strip
+      break if answer == '0'
 
       if client.document_type == 'CPF'
         if GENERATE_SAMPLE_DOCUMENT
@@ -171,13 +170,13 @@ loop do
 
     puts "CREATING ACCOUNT (type 'list' to view registered clients)"
     print 'Enter the client CPF or CNPJ (only numbers): '
-    document = gets.chomp.downcase
+    document = gets.strip.downcase
     if document == 'list'
       puts '-------------------------------'
       list_clients
       puts '-------------------------------'
       print "\nEnter the client CPF or CNPJ (only numbers): "
-      document = gets.chomp
+      document = gets.strip
     end
 
     client = Client.find(document:)
@@ -190,29 +189,31 @@ loop do
         puts " -> #{format_account_number(account.number)} - #{account.name}"
       end
       #TO-DO: Validate account unique name for current client
+      #TO-DO: Validate account name -> cannot be 'Main Account'
       print "\nEnter the new account name: "
-      name = gets.chomp
+      name = gets.strip
 
       puts "Confirm account creation?"
       print '(Press ENTER to confirm or type 0 to cancel) -> '
-      answer = gets.chomp
+      answer = gets.strip
       break if answer == '0'
 
-      account = Account.create(name:, balance: 0)
+      account = Account.create(name: name.strip, balance: 0)
       client.add_account(account)
+      account.update(number: generate_account_number(account))
 
       puts "\nAccount '#{account.name}' (number: #{format_account_number(account.number)}) created sucessfully!"
     end
   when 5 #SHOW CURRENT BALANCE
     puts "ACCOUNT BALANCE (type 'list' to view registered accounts)"
     print 'Enter the account number (only numbers): '
-    number = gets.chomp.downcase
+    number = gets.strip.downcase
     if number == 'list'
       puts '-------------------------------'
       list_accounts
       puts '-------------------------------'
       print "Enter the account number (only numbers): "
-      number = gets.chomp
+      number = gets.strip
     end
 
     account = Account.find(number:)
@@ -220,8 +221,40 @@ loop do
     1.times do
       break puts 'No account with given number ' if account.nil?
 
-      puts "#{format_account_number(account.number)} - #{account.name} of #{account.client.full_name}"
+      puts "Account #{format_account_number(account.number)} - #{account.name} of #{account.client.full_name}"
       puts "BALANCE: R$#{account.balance}"
+    end
+  when 6 #EDIT ACCOUNT NAME
+    puts "EDITING ACCOUNT (type 'list' to view registered accounts)"
+    print 'Enter the account number (only numbers): '
+    number = gets.strip.downcase
+    if number == 'list'
+      puts '-------------------------------'
+      list_accounts
+      puts '-------------------------------'
+      print "Enter the account number (only numbers): "
+      number = gets.strip
+    end
+
+    account = Account.find(number:)
+    
+    1.times do
+      break puts 'No account with given number ' if account.nil?
+      break puts "You cannot rename a client's Main Account." if account.name == 'Main Account'
+      
+      puts "Account #{format_account_number(number)} - #{account.name} of #{account.client.full_name}"
+      puts "BALANCE: R$#{account.balance}"
+      print "\nNew account name: "
+      account.name = gets.strip
+
+      puts "\nConfirm account edition? (Press ENTER to confirm or type 0 to cancel)"
+      answer = gets.strip
+      break puts 'Edition canceled' if answer == '0'
+
+      #TO-DO: Validate if's a number
+      #TO-DO: Validate account unique name for current client
+      account.save
+      puts "Account updated successfully!"
     end
   when 99
     puts 'System shutting down...'
