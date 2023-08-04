@@ -23,7 +23,7 @@ loop do
   puts 'ACCOUNTS'
   puts '3. List all accounts'
   puts '4. Create new account'
-  puts '. Show account balance'
+  puts '5. Show account balance'
   puts '. Generate statement'
   puts '. Create account'
   puts '. Edit account'
@@ -59,6 +59,32 @@ loop do
     legal_persons.each do |legal_person|
       cnpj = CNPJ.new(legal_person.document)
       puts "#{legal_person.full_name} - CNPJ: #{cnpj.formatted}"
+    end
+  end
+
+  def list_accounts
+    puts 'NATURAL PERSONS ACCOUNTS'
+    natural_persons = Client.where(document_type: 'CPF').all
+
+    natural_persons.each do |natural_person|
+      cpf = CPF.new(natural_person.document)
+      puts "\n#{natural_person.full_name} - CPF: #{cpf.formatted}"
+
+      natural_person.accounts.each do |account|
+        puts " -> #{format_account_number(account.number)} - #{account.name}"
+      end
+    end
+    puts '-------------------------------'
+    puts 'LEGAL PERSONS ACCOUNTS'
+    legal_persons   = Client.where(document_type: 'CNPJ').all
+
+    legal_persons.each do |legal_person|
+      cnpj = CNPJ.new(legal_person.document)
+      puts "\n#{legal_person.full_name} - CNPJ: #{cnpj.formatted}"
+
+      legal_person.accounts.each do |account|
+        puts " -> #{format_account_number(account.number)} - #{account.name}"
+      end
     end
   end
 
@@ -139,29 +165,7 @@ loop do
       client.add_account(account)
     end
   when 3 #LIST ALL ACCOUNTS
-    puts 'NATURAL PERSONS ACCOUNTS'
-    natural_persons = Client.where(document_type: 'CPF').all
-
-    natural_persons.each do |natural_person|
-      cpf = CPF.new(natural_person.document)
-      puts "\n#{natural_person.full_name} - CPF: #{cpf.formatted}"
-
-      natural_person.accounts.each do |account|
-        puts " -> #{generate_account_number(account)} - #{account.name}"
-      end
-    end
-    puts '-------------------------------'
-    puts 'LEGAL PERSONS ACCOUNTS'
-    legal_persons   = Client.where(document_type: 'CNPJ').all
-
-    legal_persons.each do |legal_person|
-      cnpj = CNPJ.new(legal_person.document)
-      puts "\n#{legal_person.full_name} - CNPJ: #{cnpj.formatted}"
-
-      legal_person.accounts.each do |account|
-        puts " -> #{generate_account_number(account)} - #{account.name}"
-      end
-    end
+    list_accounts
   when 4 #CREATE NEW ACCOUNT
     client = Client.new
 
@@ -183,9 +187,9 @@ loop do
 
       puts "Accounts of '#{client.full_name}'"
       client.accounts.each do |account|
-        puts " -> #{generate_account_number(account)} - #{account.name}"
+        puts " -> #{format_account_number(account.number)} - #{account.name}"
       end
-      #TO-DO: Validate account uniqueness for current client
+      #TO-DO: Validate account unique name for current client
       print "\nEnter the new account name: "
       name = gets.chomp
 
@@ -197,7 +201,27 @@ loop do
       account = Account.create(name:, balance: 0)
       client.add_account(account)
 
-      puts "\nAccount '#{account.name}' (number: #{generate_account_number(account)}) created sucessfully!"
+      puts "\nAccount '#{account.name}' (number: #{format_account_number(account.number)}) created sucessfully!"
+    end
+  when 5 #SHOW CURRENT BALANCE
+    puts "ACCOUNT BALANCE (type 'list' to view registered accounts)"
+    print 'Enter the account number (only numbers): '
+    number = gets.chomp.downcase
+    if number == 'list'
+      puts '-------------------------------'
+      list_accounts
+      puts '-------------------------------'
+      print "Enter the account number (only numbers): "
+      number = gets.chomp
+    end
+
+    account = Account.find(number:)
+
+    1.times do
+      break puts 'No account with given number ' if account.nil?
+
+      puts "#{format_account_number(account.number)} - #{account.name} of #{account.client.full_name}"
+      puts "BALANCE: R$#{account.balance}"
     end
   when 99
     puts 'System shutting down...'

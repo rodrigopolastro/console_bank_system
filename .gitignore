@@ -1,5 +1,6 @@
 #Test environment
 testing.rb
+irb_config.rb
 
 #Database file
 db/bank_system.db

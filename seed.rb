@@ -7,7 +7,7 @@ require_relative 'models/client'
 require_relative 'models/account'
 require_relative 'models/personal_transaction'
 require_relative 'models/transfer'
-
+require_relative 'helpers/generate-account_number'
 sample_adress = {
   federal_state: 'SP',
   city: 'Mogi Guaçu',
@@ -91,4 +91,5 @@ clients = Client.all
 clients.each do |client|
   account = Account.create(name: 'Main Account', balance: 0)
   client.add_account(account)
+  account.update(number: generate_account_number(account))
 end

@@ -23,8 +23,11 @@ def generate_account_number(account)
     standard_id += id.to_s
   end
 
-  account_number = leading_zeros(account.client_id) + "-" + leading_zeros(account.id)
+  account_number = leading_zeros(account.client_id) + leading_zeros(account.id)
 end
 
+def format_account_number(number)
+  number.insert(4, '-')
+end
 
 
