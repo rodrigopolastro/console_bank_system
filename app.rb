@@ -6,6 +6,7 @@ Sequel.sqlite('db/bank_system.db')
 require_relative 'models/client'
 require_relative 'models/account'
 require_relative 'helpers/validate_answer'
+require_relative 'helpers/generate_account_number'
 
 require_relative 'config/test_mode.rb'
 loop do
@@ -146,11 +147,11 @@ loop do
       puts "\n#{natural_person.full_name} - CPF: #{cpf.formatted}"
 
       natural_person.accounts.each do |account|
-        puts " -> Account Number: #{account.id} - #{account.name}"
+        puts " -> #{generate_account_number(account)} - #{account.name}"
       end
     end
     puts '-------------------------------'
-    puts 'LEGAL PERSONS'
+    puts 'LEGAL PERSONS ACCOUNTS'
     legal_persons   = Client.where(document_type: 'CNPJ').all
 
     legal_persons.each do |legal_person|
@@ -158,7 +159,7 @@ loop do
       puts "\n#{legal_person.full_name} - CNPJ: #{cnpj.formatted}"
 
       legal_person.accounts.each do |account|
-        puts " -> Account Number: #{account.id} - #{account.name}"
+        puts " -> #{generate_account_number(account)} - #{account.name}"
       end
     end
   when 4 #CREATE NEW ACCOUNT
@@ -166,7 +167,7 @@ loop do
 
     puts "CREATING ACCOUNT (type 'list' to view registered clients)"
     print 'Enter the client CPF or CNPJ (only numbers): '
-    document = gets.chomp
+    document = gets.chomp.downcase
     if document == 'list'
       puts '-------------------------------'
       list_clients
@@ -178,11 +179,11 @@ loop do
     client = Client.find(document:)
 
     1.times do
-      break if client.nil?
+      break puts 'No client with given document.' if client.nil?
 
       puts "Accounts of '#{client.full_name}'"
       client.accounts.each do |account|
-        puts " -> Account Number: #{account.id} - #{account.name}"
+        puts " -> #{generate_account_number(account)} - #{account.name}"
       end
       #TO-DO: Validate account uniqueness for current client
       print "\nEnter the new account name: "
@@ -196,7 +197,7 @@ loop do
       account = Account.create(name:, balance: 0)
       client.add_account(account)
 
-      puts "\nAccount '#{account.name}' (number: #{account.id}) created sucessfully!"
+      puts "\nAccount '#{account.name}' (number: #{generate_account_number(account)}) created sucessfully!"
     end
   when 99
     puts 'System shutting down...'
