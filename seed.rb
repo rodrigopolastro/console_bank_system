@@ -89,16 +89,6 @@ Client.multi_insert([
 # All clients have a 'Main Account' by default
 clients = Client.all
 clients.each do |client|
-  Account.create(
-    name: 'Main Account',
-    client_id: client.id,
-    balance: 0,
-  )
+  account = Account.create(name: 'Main Account', balance: 0)
+  client.add_account(account)
 end
-
-# Account.multi_insert([
-#   {
-#     name: 'Main'
-#     client_id: 
-#   }
-# ])

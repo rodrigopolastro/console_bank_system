@@ -5,10 +5,11 @@ Sequel.sqlite('db/bank_system.db')
 
 require_relative 'models/client'
 require_relative 'models/account'
+require_relative 'helpers/validate_answer'
+
 require_relative 'config/test_mode.rb'
 loop do
   system("clear")
-
   #IDEA -> General and Specific options:
   #     -> General options = bank related
   #     -> Specific options = user related (one client at a time)
@@ -16,11 +17,10 @@ loop do
   puts '-------------------------------'
   puts 'CLIENTS'
   puts '1. List clients'
-  puts '2. Register natural person'
-  puts '3. Register legal person'
+  puts '2. Register client'
   puts '-------------------------------'
   puts 'ACCOUNTS'
-  puts '4. List all accounts'
+  puts '3. List all accounts'
   puts '. List accounts of one client'
   puts '. Show account balance'
   puts '. Generate statement'
@@ -35,11 +35,12 @@ loop do
   puts 'TRANSFERS'
   puts '. Make Transfer'
   puts '-------------------------------'
-  puts '0. Exit'
+  puts '99. Exit'
   puts '-------------------------------'
   print 'Enter the desired option: '
   option = gets.chomp.to_i
-  puts ""
+
+  system("clear")
 
   case option
   when 1 #LIST CLIENTS
@@ -60,87 +61,74 @@ loop do
     end
   when 2 #REGISTER NATURAL PERSON
     client = Client.new
-    client.document_type = 'CPF'
 
-    puts 'REGISTERING NATURAL PERSON'
-    print 'Client full name: '
-    client.full_name = gets.chomp
-    print 'CPF (only numbers): '
-    client.document = gets.chomp
-    print 'Phone number (only numbers): '
-    client.phone = gets.chomp
-    print 'Zipcode or CEP (only numbers): '
-    client.zipcode = gets.chomp
-    print 'Federal State: '
-    client.federal_state = gets.chomp
-    print 'City: '
-    client.city = gets.chomp
-    print 'District: '
-    client.district = gets.chomp
-    print 'Public Area: '
-    client.public_area = gets.chomp
-
-    if(GENERATE_SAMPLE_CPF)
-      client.document = SAMPLE_CPF
-    end
-
-    if(GENERATE_SAMPLE_PHONE)
-      client.phone = SAMPLE_PHONE
-    end
-
-    if(GENERATE_SAMPLE_ADRESS)
-      client.zipcode       = SAMPLE_ADRESS[:zipcode]
-      client.federal_state = SAMPLE_ADRESS[:federal_state]
-      client.city          = SAMPLE_ADRESS[:city]
-      client.district      = SAMPLE_ADRESS[:district]
-      client.public_area   = SAMPLE_ADRESS[:public_area]
-    end
-    client.save
-
-    cpf = CPF.new(client.document)
-    puts "\nNatural person '#{client.full_name}' (CPF: #{cpf.formatted}) created successfully!"
-  when 3 #REGISTER LEGAL PERSON
-    client = Client.new
-    client.document_type = 'CNPJ'
-
-    puts 'REGISTERING LEGAL PERSON'
-    print 'Company full name: '
-    client.full_name = gets.chomp
-    print 'CNPJ (only numbers): '
-    client.document = gets.chomp
-    print 'Phone number (only numbers): '
-    client.phone = gets.chomp
-    print 'Zipcode or CEP(only numbers): '
-    client.zipcode = gets.chomp
-    print 'Federal State: '
-    client.federal_state = gets.chomp
-    print 'City: '
-    client.city = gets.chomp
-    print 'District: '
-    client.district = gets.chomp
-    print 'Public Area: '
-    client.public_area = gets.chomp
-
-    if(GENERATE_SAMPLE_CNPJ)
-      client.document = SAMPLE_CNPJ
-    end
-
-    if(GENERATE_SAMPLE_PHONE)
-      client.phone = SAMPLE_PHONE
-    end
-
-    if(GENERATE_SAMPLE_ADRESS)
-      client.zipcode       = SAMPLE_ADRESS[:zipcode]
-      client.federal_state = SAMPLE_ADRESS[:federal_state]
-      client.city          = SAMPLE_ADRESS[:city]
-      client.district      = SAMPLE_ADRESS[:district]
-      client.public_area   = SAMPLE_ADRESS[:public_area]
-    end
-    client.save
+    print 'Is this client a natural person? [y/n] '
+    answer = gets.chomp
     
-    cnpj = CNPJ.new(client.document)
-    puts "\nLegal person '#{client.full_name}' (CNPJ: #{cnpj.formatted}) created successfully!"
-  when 4 #LIST ALL ACCOUNTS    
+    #Loop to exit form for invalid input
+    1.times do 
+      if affirmative?(answer)
+        client.document_type = 'CPF'
+        puts "\nREGISTERING NATURAL PERSON"
+        print 'Client full name: '
+      elsif negative?(answer)
+        client.document_type = 'CNPJ'
+        puts "\nREGISTERING LEGAL PERSON"
+        print 'Company full name: '
+      else
+        puts 'Resposta inválida.'
+        break #Break internal loop, not the application's loop
+      end
+      
+      client.full_name = gets.chomp
+      print "#{client.document_type} (only numbers): "
+      client.document = gets.chomp
+      print 'Phone number (only numbers): '
+      client.phone = gets.chomp
+      print 'CEP (only numbers): '
+      client.zipcode = gets.chomp
+      print 'Federal State: '
+      client.federal_state = gets.chomp
+      print 'City: '
+      client.city = gets.chomp
+      print 'District: '
+      client.district = gets.chomp
+      print 'Public Area: '
+      client.public_area = gets.chomp
+
+      if(GENERATE_SAMPLE_PHONE)
+        client.phone = SAMPLE_PHONE
+      end
+      
+      if(GENERATE_SAMPLE_ADRESS)
+        client.zipcode       = SAMPLE_ADRESS[:zipcode]
+        client.federal_state = SAMPLE_ADRESS[:federal_state]
+        client.city          = SAMPLE_ADRESS[:city]
+        client.district      = SAMPLE_ADRESS[:district]
+        client.public_area   = SAMPLE_ADRESS[:public_area]
+      end
+      
+      
+      if client.document_type == 'CPF'
+        if GENERATE_SAMPLE_DOCUMENT
+          client.document = SAMPLE_CPF
+        end
+        cpf = CPF.new(client.document)
+        puts "\nNatural person '#{client.full_name}' (CPF: #{cpf.formatted}) created successfully!"
+      else 
+        if GENERATE_SAMPLE_DOCUMENT
+          client.document = SAMPLE_CNPJ
+        end
+        cnpj = CNPJ.new(client.document)
+        puts "\nLegal person '#{client.full_name}' (CNPJ: #{cnpj.formatted}) created successfully!"
+      end
+
+      client.save
+      
+      account = Account.create(name: 'Main Account', balance: 0)
+      client.add_account(account)
+    end
+  when 3 #LIST ALL ACCOUNTS
     puts 'NATURAL PERSONS ACCOUNTS'
     natural_persons = Client.where(document_type: 'CPF').all
 
@@ -164,13 +152,13 @@ loop do
         puts " -> Account Number: #{account.id} - #{account.name}"
       end
     end
-  when 0
-    puts 'Encerrando sistema...'
+  when 99
+    puts 'System shutting down...'
     break
   else
-    puts 'Opção Inválida.'
+    puts 'Invalid option.'
   end
-  print "\nAperte ENTER para voltar..."
+  print "\nPress ENTER to return..."
   waiting_variable = gets
 end
 

@@ -2,9 +2,8 @@
 # In order to test the application quicker, feel free to set some of these
 # constants as TRUE, so the script will auto-generate the specified values
 # and skip input validations.
+GENERATE_SAMPLE_DOCUMENT = true
 GENERATE_SAMPLE_PHONE    = true
-GENERATE_SAMPLE_CPF      = true
-GENERATE_SAMPLE_CNPJ     = true
 GENERATE_SAMPLE_ADRESS   = true
 
 # You can also modify the sample values if needed
