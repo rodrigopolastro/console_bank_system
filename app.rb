@@ -4,10 +4,14 @@ require 'cpf_cnpj'
 Sequel.sqlite('db/bank_system.db')
 
 require_relative 'models/client'
+require_relative 'models/account'
 require_relative 'config/test_mode.rb'
 loop do
   system("clear")
 
+  #IDEA -> General and Specific options:
+  #     -> General options = bank related
+  #     -> Specific options = user related (one client at a time)
   puts '>>>>> CONSOLE BANK SYSTEM <<<<<'
   puts '-------------------------------'
   puts 'CLIENTS'
@@ -16,12 +20,13 @@ loop do
   puts '3. Register legal person'
   puts '-------------------------------'
   puts 'ACCOUNTS'
-  puts '4. List accounts'
-  puts '5. Show account balance'
-  puts '6. Generate statement'
-  puts '7. Create account'
-  puts '8. Edit account'
-  puts '9. Delete account'
+  puts '4. List all accounts'
+  puts '. List accounts of one client'
+  puts '. Show account balance'
+  puts '. Generate statement'
+  puts '. Create account'
+  puts '. Edit account'
+  puts '. Delete account'
   puts '-------------------------------'
   puts 'PERSONAL TRANSACTIONS'
   puts '. Make deposit'
@@ -37,22 +42,23 @@ loop do
   puts ""
 
   case option
-  when 1 
-    natural_persons = Client.where(document_type: 'CPF').all
-    legal_persons   = Client.where(document_type: 'CNPJ').all
-
+  when 1 #LIST CLIENTS
     puts 'NATURAL PERSONS'
+    natural_persons = Client.where(document_type: 'CPF').all
+
     natural_persons.each do |natural_person|
       cpf = CPF.new(natural_person.document)
       puts "#{natural_person.full_name} - CPF: #{cpf.formatted}"
     end
     puts '-------------------------------'
     puts 'LEGAL PERSONS'
+    legal_persons   = Client.where(document_type: 'CNPJ').all
+
     legal_persons.each do |legal_person|
       cnpj = CNPJ.new(legal_person.document)
       puts "#{legal_person.full_name} - CNPJ: #{cnpj.formatted}"
     end
-  when 2
+  when 2 #REGISTER NATURAL PERSON
     client = Client.new
     client.document_type = 'CPF'
 
@@ -63,7 +69,7 @@ loop do
     client.document = gets.chomp
     print 'Phone number (only numbers): '
     client.phone = gets.chomp
-    print 'Zipcode or CEP(only numbers): '
+    print 'Zipcode or CEP (only numbers): '
     client.zipcode = gets.chomp
     print 'Federal State: '
     client.federal_state = gets.chomp
@@ -91,8 +97,9 @@ loop do
     end
     client.save
 
-    puts "\nNatural person '#{client.full_name}' created successfully!"
-  when 3
+    cpf = CPF.new(client.document)
+    puts "\nNatural person '#{client.full_name}' (CPF: #{cpf.formatted}) created successfully!"
+  when 3 #REGISTER LEGAL PERSON
     client = Client.new
     client.document_type = 'CNPJ'
 
@@ -130,8 +137,33 @@ loop do
       client.public_area   = SAMPLE_ADRESS[:public_area]
     end
     client.save
+    
+    cnpj = CNPJ.new(client.document)
+    puts "\nLegal person '#{client.full_name}' (CNPJ: #{cnpj.formatted}) created successfully!"
+  when 4 #LIST ALL ACCOUNTS    
+    puts 'NATURAL PERSONS ACCOUNTS'
+    natural_persons = Client.where(document_type: 'CPF').all
 
-    puts "\nLegal person '#{client.full_name}' created successfully!"
+    natural_persons.each do |natural_person|
+      cpf = CPF.new(natural_person.document)
+      puts "\n#{natural_person.full_name} - CPF: #{cpf.formatted}"
+      
+      natural_person.accounts.each do |account|
+        puts " -> Account Number: #{account.id} - #{account.name}"
+      end
+    end
+    puts '-------------------------------'
+    puts 'LEGAL PERSONS'
+    legal_persons   = Client.where(document_type: 'CNPJ').all
+
+    legal_persons.each do |legal_person|
+      cnpj = CNPJ.new(legal_person.document)
+      puts "\n#{legal_person.full_name} - CNPJ: #{cnpj.formatted}"
+      
+      legal_person.accounts.each do |account|
+        puts " -> Account Number: #{account.id} - #{account.name}"
+      end
+    end
   when 0
     puts 'Encerrando sistema...'
     break
