@@ -37,6 +37,8 @@ loop do
   puts 'TRANSFERS'
   puts '. Make Transfer'
   puts '-------------------------------'
+  puts 'EXTRA: BANK ANALYSIS'
+  puts '. Bank Statistics'
   puts '99. Exit'
   puts '-------------------------------'
   print 'Enter the desired option: '
@@ -338,6 +340,53 @@ loop do
       personal_transaction.amount = amount
       personal_transaction.save
       puts "Deposit of R$#{amount} made successfully!"
+      puts "NEW BALANCE: R$#{new_balance}"
+    end
+  when 10 #MAKE WITHDRAWAL
+    personal_transaction = PersonalTransaction.new
+    personal_transaction.transaction_type = 'withdrawal'
+
+    puts "MAKING WITHDRAWAL (type 'list' to view registered accounts)"
+    print 'Enter the account number (only numbers): '
+    number = gets.strip.downcase
+    if number == 'list'
+      puts '-------------------------------'
+      list_accounts
+      puts '-------------------------------'
+      print "Enter the account number (only numbers): "
+      number = gets.strip
+    end
+
+    account = Account.find(number:)
+    
+    1.times do
+      break puts 'No account with given number. ' if account.nil?
+      
+      personal_transaction.account_id = account.id
+      puts "Account #{format_account_number(number)} - #{account.name} of #{account.client.full_name}"
+      puts "BALANCE: R$#{account.balance}"
+      print "\nWithdrawal value: "
+      amount = gets.strip.to_f
+
+      break puts "The withdrawal value must be a number greater than 0." if amount <= 0
+      
+      if amount > account.balance
+        puts 'The account balance is too low for the withdrawal.'
+        break puts 'Withdrawal cancelled: Your overdraft limit is R$100.00' if account.balance - amount < -100
+        
+        print 'Would you link to go into overdraft? [y/n]'
+        answer = gets.strip
+
+        break puts 'Deposit canceled.' unless affirmative?(answer)
+      end
+      
+      new_balance = account.balance - amount
+      account.update(balance: new_balance)
+
+      personal_transaction.amount = amount
+      personal_transaction.save
+      puts "Withdrawal of R$#{amount} made successfully!"
+      puts "NEW BALANCE: R$#{new_balance}"
     end
   when 99
     puts 'System shutting down...'
