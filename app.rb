@@ -35,13 +35,13 @@ loop do
   puts '10. Withdraw money'
   puts '-------------------------------'
   puts 'TRANSFERS'
-  puts '. Make Transfer'
+  puts '11. Make Transfer'
   puts '-------------------------------'
   puts 'EXTRA: BANK ANALYSIS'
   puts '. Bank Statistics'
   puts '99. Exit'
   puts '-------------------------------'
-  print 'Enter the desired option: '
+  print 'Enter the desired option number: '
   option = gets.strip.to_i
 
   system("clear")
@@ -295,6 +295,7 @@ loop do
         Transfer.create(
           origin_account_id: main_account.id,
           destination_account_id: account.id,
+          payment_method: 'PIX',
           amount: account.balance
         )
       end
@@ -320,6 +321,7 @@ loop do
     
     1.times do
       break puts 'No account with given number. ' if account.nil?
+      system("clear")
       
       personal_transaction.account_id = account.id
       puts "Account #{format_account_number(number)} - #{account.name} of #{account.client.full_name}"
@@ -343,9 +345,6 @@ loop do
       puts "NEW BALANCE: R$#{new_balance}"
     end
   when 10 #MAKE WITHDRAWAL
-    personal_transaction = PersonalTransaction.new
-    personal_transaction.transaction_type = 'withdrawal'
-
     puts "MAKING WITHDRAWAL (type 'list' to view registered accounts)"
     print 'Enter the account number (only numbers): '
     number = gets.strip.downcase
@@ -360,6 +359,8 @@ loop do
     account = Account.find(number:)
     
     1.times do
+      personal_transaction = PersonalTransaction.new
+      personal_transaction.transaction_type = 'withdrawal'
       break puts 'No account with given number. ' if account.nil?
       
       personal_transaction.account_id = account.id
@@ -387,6 +388,114 @@ loop do
       personal_transaction.save
       puts "Withdrawal of R$#{amount} made successfully!"
       puts "NEW BALANCE: R$#{new_balance}"
+    end
+  when 11 #MAKE TRANSFER
+    puts "MAKING TRANSFER (type 'list' to view registered accounts)"
+    print 'Enter the origin account number (only numbers): '
+    origin_number = gets.strip.downcase
+    if origin_number == 'list'
+      puts '-------------------------------'
+      list_accounts
+      puts '-------------------------------'
+      print "Enter the origin account number (only numbers): "
+      origin_number = gets.strip
+    end
+
+    origin_account = Account.find(number: origin_number)
+    
+    1.times do
+      break puts 'No account with given number.' if origin_account.nil?
+      break puts 'The informed account does not have funds.' if origin_account.balance <= 0
+      transfer = Transfer.new
+      transfer.origin_account_id = origin_account.id
+      
+      system("clear")
+      puts '-------------------------------'
+      puts 'ORIGIN ACCOUNT'
+      puts "Account #{format_account_number(origin_number)} - #{origin_account.name} of #{origin_account.client.full_name}"
+      puts "BALANCE: R$#{origin_account.balance}"
+      puts '-------------------------------'
+      puts 'PAYMENT METHOD'
+      puts '1. PIX'
+      puts '2. TED (1% tax)'
+      print 'Enter the desired payment method number: '
+      payment_method = gets.strip.to_i
+
+      case payment_method
+      when 1
+        transfer.payment_method = 'PIX'
+
+        puts '-------------------------------'
+        puts 'PIX KEY TYPE'
+        puts '1. CPF/CNPJ'
+        puts '2. PHONE NUMBER'
+        #TO-DO: Add random key option (each client can have up to 5 keys)
+        # puts '3. Random key'
+        print 'Enter the desired PIX key type number: '
+        pix_key_type = gets.strip.to_i
+        case pix_key_type
+        when 1
+          print 'Enter the destination client CPF/CNPJ: '
+          document = gets.strip
+          client = Client.find(document:)
+          break puts 'No client with given document.' if client.nil?
+          
+          #Select Main Account of the destination client
+          main_account = client.accounts.find{|account| account.name == 'Main Account'}
+          transfer.destination_account_id = main_account.id 
+        when 2
+          puts 'ainda não dá pra fazer por telefone.'
+          # print 'Enter the destination client phone (only numbers): '
+          # phone = gets.strip
+          # client = Client.find(phone:)
+          # break puts 'No client with given document.' if client.nil?          
+        else 
+          puts 'Invalid PIX key type.'
+        end
+      when 2
+        puts 'ainda não dá pra fazer por TED.'
+        # transfer.payment_method = 'TED'
+        # puts '-------------------------------'
+        #   print 'Enter the destination client full name: '
+        #   name = gets.strip
+        #   client = Client.find(name:)
+        #   break puts 'No client with given name.' if client.nil?
+          
+        #   print 'Client CPF/CNPJ: '
+        #   document = gets.strip
+        #   client = Client.find(document:)
+        #   break puts 'No client with given document.' if client.nil?
+          
+        #   print 'Account number (only numbers): '
+        #   number = gets.strip
+        #   account = Account.find(number:)
+        #   break puts 'No account with given number' if account.nil?
+      else
+        puts 'Invalid payment method.'
+      end
+
+      print "\nTransfer value: "
+      amount = gets.strip.to_f
+
+      break puts "The transfer value must be a number greater than 0." if amount <= 0
+      break puts "The account balance is too low for the transfer\nTransfer canceled." if amount > origin_account.balance
+
+      balance = origin_account.balance - amount
+      origin_account.update(balance:)
+
+      destination_account = Account.find(id: transfer.destination_account_id)
+      balance = destination_account.balance + amount
+      destination_account.update(balance:)
+
+      transfer.save
+      print "Transfer of R$#{amount} "
+      print "to '#{destination_account.name}' " 
+      print "of #{destination_account.client.full_name} " 
+      print "made successfully!"
+
+      print "'#{origin_account.name} "
+      print "of #{origin_account.client.full_name} "
+      print "NEW BALANCE: R$#{origin_account.balance}"
     end
   when 99
     puts 'System shutting down...'
