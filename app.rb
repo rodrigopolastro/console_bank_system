@@ -13,6 +13,32 @@ require_relative 'helpers/validate_answer'
 require_relative 'helpers/generate_account_number'
 require_relative 'helpers/generate_phone_number'
 
+PERCENTAGE_FEE_VALUE = 0.23/100
+# DAY_DURATION = 60*60*24 => 24 hours in seconds
+# DAY_DURATION = 60*5 # => Default: 5 minutes
+DAY_DURATION_IN_SECONDS = 30 # => 10 seconds
+
+def update_overdraft_accounts
+  overdraft_accounts = Account.where{balance < 0}
+  overdraft_accounts.each do |account|
+    days_in_overdraft = account.days_in_overdraft + 1
+    balance = account.balance * (1 + PERCENTAGE_FEE_VALUE) # => * 1.0023
+    account.update(balance:, days_in_overdraft:)
+  end
+end 
+
+Thread.new do
+  loop do
+    sleep (DAY_DURATION_IN_SECONDS)
+    update_overdraft_accounts
+  end
+end
+
+def calculate_total_fee(account)
+  total_fee = (1 + PERCENTAGE_FEE_VALUE) ** account.days_in_overdraft
+  total_fee_percentage = (total_fee - 1) * 100
+end
+
 require_relative 'config/test_mode.rb'
 loop do
   system("clear")
@@ -231,7 +257,11 @@ loop do
       break puts 'No account with given number ' if account.nil?
 
       puts "Account #{format_account_number(account.number)} - #{account.name} of #{account.client.full_name}"
-      puts "BALANCE: R$#{account.balance}"
+        puts "BALANCE: R$#{account.balance}"
+      if account.balance < 0
+        puts "Days in overdraft: #{account.days_in_overdraft}"
+        puts "Total Fee: #{calculate_total_fee(account).round(2)}%"
+      end
     end
   when 6 #EDIT ACCOUNT NAME
     puts "EDITING ACCOUNT (type 'list' to view registered accounts)"
@@ -455,7 +485,8 @@ loop do
       break puts 'Deposit canceled' if answer == '0'
 
       new_balance = account.balance + amount
-      account.update(balance: new_balance)
+      days_in_overdraft = 0 if new_balance >= 0
+      account.update(balance: new_balance, days_in_overdraft:)
 
       personal_transaction.amount = amount
       personal_transaction.save
@@ -493,7 +524,8 @@ loop do
         puts 'The account balance is too low for the withdrawal.'
         break puts 'Withdrawal cancelled: Your overdraft limit is R$100.00' if account.balance - amount < -100
         
-        print 'Would you link to go into overdraft? [y/n]'
+        puts 'Going overdraft will add a 0.23% daily fee over the negative balance.'
+        print 'Would you like to go into overdraft? [y/n]'
         answer = gets.strip
 
         break puts 'Deposit canceled.' unless affirmative?(answer)
@@ -616,7 +648,8 @@ loop do
       origin_account.update(balance:)
       
       balance = destination_account.balance + amount
-      destination_account.update(balance:)
+      days_in_overdraft = 0 if balance >= 0
+      destination_account.update(balance:, days_in_overdraft:)
       
       transfer.save
       puts '-------------------------------'
