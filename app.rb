@@ -13,34 +13,33 @@ require_relative 'helpers/generate_account_number'
 require_relative 'config/test_mode.rb'
 loop do
   system("clear")
-  #IDEA -> General and Specific options:
-  #     -> General options = bank related
-  #     -> Specific options = user related (one client at a time)
-  puts '>>>>> CONSOLE BANK SYSTEM <<<<<'
-  puts '-------------------------------'
-  puts 'CLIENTS'
-  puts '1. List clients'
-  puts '2. Register client'
-  puts '-------------------------------'
-  puts 'ACCOUNTS'
-  puts '3. List all accounts'
-  puts '4. Create new account'
-  puts '5. Show account balance'
-  puts '6. Edit account name'
-  puts '7. Delete account'
-  puts '. Generate statement'
-  puts '-------------------------------'
-  puts 'PERSONAL TRANSACTIONS'
-  puts '9. Make deposit'
-  puts '10. Withdraw money'
-  puts '-------------------------------'
-  puts 'TRANSFERS'
-  puts '11. Make Transfer'
-  puts '-------------------------------'
-  puts 'EXTRA: BANK ANALYSIS'
-  puts '. Bank Statistics'
-  puts '99. Exit'
-  puts '-------------------------------'
+  puts '-----------------------------------'
+  puts '| >>>>> CONSOLE BANK SYSTEM <<<<< |'
+  puts '|---------------------------------|'
+  puts '| CLIENTS                         |'
+  puts '| 1. List clients                 |'
+  puts '| 2. Register client              |'
+  puts '|---------------------------------|'
+  puts '| ACCOUNTS                        |'
+  puts '| 3. List all accounts            |'
+  puts '| 4. Create new account           |'
+  puts '| 5. Show account balance         |'
+  puts '| 6. Edit account name            |'
+  puts '| 7. Delete account               |'
+  puts '| 8. Generate statement           |'
+  puts '|---------------------------------|'
+  puts '| PERSONAL TRANSACTIONS           |'
+  puts '| 9. Make deposit                 |'
+  puts '| 10. Withdraw money              |'
+  puts '|---------------------------------|'
+  puts '| TRANSFERS                       |'
+  puts '| 11. Make Transfer               |'
+  puts '|---------------------------------|'
+  puts '| EXTRA: BANK ANALYSIS            |'
+  puts '| . Bank Statistics               |'
+  puts '|---------------------------------|'
+  puts '| 99. Exit                        |'
+  puts '-----------------------------------'
   print 'Enter the desired option number: '
   option = gets.strip.to_i
 
@@ -166,6 +165,7 @@ loop do
 
       account = Account.create(name: 'Main Account', balance: 0)
       client.add_account(account)
+      account.update(number: generate_account_number(account))
     end
   when 3 #LIST ALL ACCOUNTS
     list_accounts
@@ -301,6 +301,54 @@ loop do
       end
       account.delete
       puts "Account deleted successfully!"
+    end
+  when 8 #GENERATE STATEMENT
+    puts "GENERATING STATEMENT (type 'list' to view registered accounts)"
+    print 'Enter the account number (only numbers): '
+    number = gets.strip.downcase
+    if number == 'list'
+      puts '-------------------------------'
+      list_accounts
+      puts '-------------------------------'
+      print "Enter the account number (only numbers): "
+      number = gets.strip
+    end
+    
+    account = Account.find(number:)
+    
+    1.times do
+      break puts 'No account with given number ' if account.nil?
+      system("clear")
+      owner = account.client
+      if owner.document_type == 'CPF'
+        document = CPF.new(owner.document)
+      else 
+        document = CNPJ.new(owner.document)
+      end
+      personal_transactions = account.personal_transactions.take(10)
+      transfers = account.transfers_made + account.transfers_received
+      transfers.sort_by!{|transfer| transfer.created_at}.take(10)
+      puts '-------------------------------'
+      puts 'BANK OFICIAL STATEMENT'
+      puts "Account Name: #{account.name} - Number: #{format_account_number(account.number)}"
+      puts "Owner: #{owner.full_name} - #{owner.document_type}: #{document.formatted}"
+      puts "Creation date: #{account.created_at}"
+      puts '-------------------------------'
+      puts "DEPOSITS AND WITHDRAWALS\n"
+      personal_transactions.each do |transaction|
+        puts " -> #{transaction.created_at} - #{transaction.transaction_type.capitalize}"
+        puts "    Amount: R$#{transaction.amount}"
+      end
+      puts '-------------------------------'
+      puts "TRANSFERS\n"
+      transfers.each do |transfer|
+        if transfer.origin_account == account
+          puts " -> #{transfer.created_at} - Transfer To #{transfer.destination_account.client.full_name}"
+        else
+          puts "    #{transfer.created_at} - Transfer From #{transfer.origin_account.client.full_name}"
+        end
+        puts "    Amount: R$#{transfer.amount}"
+      end
     end
   when 9 #MAKE DEPOSIT
     personal_transaction = PersonalTransaction.new
@@ -479,14 +527,15 @@ loop do
 
       break puts "The transfer value must be a number greater than 0." if amount <= 0
       break puts "The account balance is too low for the transfer\nTransfer canceled." if amount > origin_account.balance
-
+      
       balance = origin_account.balance - amount
       origin_account.update(balance:)
 
       destination_account = Account.find(id: transfer.destination_account_id)
       balance = destination_account.balance + amount
       destination_account.update(balance:)
-
+      
+      transfer.amount = amount
       transfer.save
       print "Transfer of R$#{amount} "
       print "to '#{destination_account.name}' " 
