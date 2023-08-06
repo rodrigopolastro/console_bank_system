@@ -103,6 +103,7 @@ class Statement
       transfer_made_hash = {
         transfer_to: transfer_made.destination_account.client.full_name,
         amount: transfer_made.amount,
+        payment_method: transfer_made.payment_method,
         date: transfer_made.created_at
       }
       transfers_made_hashes << transfer_made_hash
@@ -116,6 +117,7 @@ class Statement
       transfer_received_hash = {
         transfer_from: transfer_received.origin_account.client.full_name,
         amount: transfer_received.amount,
+        payment_method: transfer_received.payment_method,
         date: transfer_received.created_at
       }
       transfers_received_hashes << transfer_received_hash

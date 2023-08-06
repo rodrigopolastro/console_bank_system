@@ -354,10 +354,10 @@ loop do
       transfers.each do |transfer|
         if account.transfers_made.include?(transfer)
           puts "\n -> Transfer Made to #{transfer.destination_account.client.full_name} - #{transfer.created_at}"
-          puts "    Amount: -R$#{transfer.amount}"
+          puts "    Amount: -R$#{transfer.amount} - Payment Method: #{transfer.payment_method}"
         else
           puts "\n -> Transfer Received from #{transfer.destination_account.client.full_name} - #{transfer.created_at}"
-          puts "    Amount: +R$#{transfer.amount}"
+          puts "    Amount: +R$#{transfer.amount} - Payment Method: #{transfer.payment_method}"
         end
       end
       all_transactions = personal_transactions + transfers
@@ -391,6 +391,7 @@ loop do
         puts 'Choose the desired export format'
         puts '1. JSON'
         puts '2. CSV'
+        puts '3. Both'
         print '-> '
         export_format = gets.strip.to_i
 
@@ -405,6 +406,13 @@ loop do
           file_name = statement.export_csv
           puts "CSV statement exported sucessfully!"
           puts "Look up the statements/csv folder for the file: #{file_name}.csv"
+        when 3
+          statement = Statement.new(account)
+          json_file_name = statement.export_json
+          csv_file_name = statement.export_csv
+          puts 'Statement files exported sucessfully!'
+          puts "JSON FILE: In statements/json folder with the name: #{json_file_name}.json"
+          puts "CSV FILE: In statements/csv folder with the name: #{csv_file_name}.csv"
         else
           puts 'Invalid export format.'
         end
