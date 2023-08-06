@@ -553,7 +553,7 @@ loop do
         pix_key_type = gets.strip.to_i
         case pix_key_type
         when 1
-          print 'Enter the destination client CPF/CNPJ: '
+          print 'Enter the receiver client CPF/CNPJ: '
           document = gets.strip
           client = Client.find(document:)
           break puts 'No client with given document.' if client.nil?
@@ -562,7 +562,7 @@ loop do
           main_account = client.accounts.find{|account| account.name == 'Main Account'}
           transfer.destination_account_id = main_account.id 
         when 2
-          print 'Enter the destination client phone (only numbers): '
+          print 'Enter the receiver client phone (only numbers): '
           phone = gets.strip
           client = Client.find(phone:)
           break puts 'No client with given document.' if client.nil?   
@@ -574,50 +574,55 @@ loop do
           break puts 'Invalid PIX key type.'
         end
       when 2
-        puts 'ainda não dá pra fazer por TED.'
-        # transfer.payment_method = 'TED'
-        # puts '-------------------------------'
-        #   print 'Enter the destination client full name: '
-        #   name = gets.strip
-        #   client = Client.find(name:)
-        #   break puts 'No client with given name.' if client.nil?
-          
-        #   print 'Client CPF/CNPJ: '
-        #   document = gets.strip
-        #   client = Client.find(document:)
-        #   break puts 'No client with given document.' if client.nil?
-          
-        #   print 'Account number (only numbers): '
-        #   number = gets.strip
-        #   account = Account.find(number:)
-        #   break puts 'No account with given number' if account.nil?
+        transfer.payment_method = 'TED'
+        puts '-------------------------------'
+        print 'Enter the receiver client CPF or CNPJ: '
+        document = gets.strip
+        client = Client.find(document:)
+        break puts 'No client with given document.' if client.nil?
+        
+        print 'Client full name: '
+        full_name = gets.strip
+        break puts 'Incorrect name for selected client.' unless client.full_name.downcase == full_name.downcase
+        
+        print 'Account number (only numbers): '
+        number = gets.strip
+        destination_account = Account.find(number:)
+        break puts 'Incorrect account number for selected client.' unless client.accounts.include?(destination_account)
+        break puts 'You cannot make a transfer to the same account.' if origin_account == destination_account
+
+        transfer.destination_account_id = destination_account.id
       else
         break puts 'Invalid payment method.'
       end
 
       print "\nTransfer value: "
       amount = gets.strip.to_f
-
       break puts "The transfer value must be a number greater than 0." if amount <= 0
-      break puts "The account balance is too low for the transfer\nTransfer canceled." if amount > origin_account.balance
       
-      balance = origin_account.balance - amount
-      origin_account.update(balance:)
+      if (transfer.payment_method == 'TED') && (origin_account.client != destination_account.client)
+        tax_multiplier = 1.01
+        puts "The origin_account will be charged in #{amount * tax_multiplier}"
+      else
+        tax_multiplier = 1
+        puts "No tax for PIX or same account transfer."
+      end
 
-      destination_account = Account.find(id: transfer.destination_account_id)
+      break puts "The account balance is too low for the transfer\nTransfer canceled." if amount * tax_multiplier > origin_account.balance
+      
+      transfer.amount = amount
+      
+      balance = origin_account.balance - amount * tax_multiplier
+      origin_account.update(balance:)
+      
       balance = destination_account.balance + amount
       destination_account.update(balance:)
       
-      transfer.amount = amount
       transfer.save
-      print "Transfer of R$#{amount} "
-      print "to '#{destination_account.name}' " 
-      print "of #{destination_account.client.full_name} " 
-      print "made successfully!"
-
-      print "'#{origin_account.name} "
-      print "of #{origin_account.client.full_name} "
-      print "NEW BALANCE: R$#{origin_account.balance}"
+      puts '-------------------------------'
+      puts 'Transfer made successfully!' 
+      puts "R$#{amount} transfered to '#{destination_account.name}' of '#{destination_account.client.full_name}'" 
+      puts "\n'#{origin_account.name} of '#{origin_account.client.full_name}' CURRENT BALANCE: R$#{origin_account.balance}"
     end
   when 99
     puts 'System shutting down...'
