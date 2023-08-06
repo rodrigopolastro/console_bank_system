@@ -1,6 +1,3 @@
-require 'faker'
-Faker::Config.locale = 'pt-BR'
-
 # >>> IMPORTANT <<<
 # In order to test the application quicker, feel free to set some of these
 # constants as TRUE, so the script will auto-generate the specified values
@@ -27,13 +24,13 @@ SAMPLE_CNPJ = sample_cnpj
 
 # SAMPLE ADRESS
 SAMPLE_ADRESS = {
-  federal_state: Faker::Adress.state,
-  city:          Faker::Adress.city,
-  district:      'Central District'
-  public_area:   Faker::Adress.street
-  postcode:      Faker::Adress.postcode
+  federal_state: 'XX',
+  city: 'Sample City',
+  district: 'Sample District',
+  public_area: 'Sample Public_area',
+  zipcode: '55555333'
 }
 
 # SAMPLE PHONE NUMBER
-SAMPLE_PHONE = generate_phone_number
+SAMPLE_PHONE = '19911112222'
 

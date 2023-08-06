@@ -1,7 +1,5 @@
 require 'sequel'
 require 'cpf_cnpj'
-require 'faker'
-Faker::Config.locale = 'pt-BR'
 
 Sequel.sqlite('db/bank_system.db')
 
@@ -9,8 +7,14 @@ require_relative 'models/client'
 require_relative 'models/account'
 require_relative 'models/personal_transaction'
 require_relative 'models/transfer'
-require_relative 'helpers/generate_account_number'
-require_relative 'helpers/generate_phone_number'
+require_relative 'helpers/generate-account_number'
+sample_adress = {
+  federal_state: 'SP',
+  city: 'Mogi Guaçu',
+  district: 'Ipê 8',
+  public_area: 'Rua dos Pinheiros',
+  zipcode: '12345678'
+}
 
 # Natural Persons
 document_type = 'CPF'
@@ -19,37 +23,37 @@ Client.multi_insert([
     full_name: 'Rodrigo Polastro da Silva',
     document_type:,
     document: CPF.generate,
-    phone: generate_phone_number,
+    phone: 19912345678,
     #Adress-related fields
-    federal_state: Faker::Adress.state,
-    city:          Faker::Adress.city,
-    district:      'Central District'
-    public_area:   Faker::Adress.street
-    postcode:      Faker::Adress.postcode
+    federal_state: sample_adress[:federal_state],
+    city:          sample_adress[:city],
+    district:      sample_adress[:district],
+    public_area:   sample_adress[:public_area],
+    zipcode:       sample_adress[:zipcode],
   }, 
   {
     full_name: 'Renato Mantovani',
     document_type:,
     document: CPF.generate,
-    phone: generate_phone_number,
+    phone: 19911112222,
     #Adress-related fields
-    federal_state: Faker::Adress.state,
-    city:          Faker::Adress.city,
-    district:      'Central District'
-    public_area:   Faker::Adress.street
-    postcode:      Faker::Adress.postcode
+    federal_state: sample_adress[:federal_state],
+    city:          sample_adress[:city],
+    district:      sample_adress[:district],
+    public_area:   sample_adress[:public_area],
+    zipcode:       sample_adress[:zipcode],
   },
   {
     full_name: 'Jonas Montedioca',
     document_type:,
     document: CPF.generate,
-    phone: generate_phone_number,
+    phone: 19977778888,
     #Adress-related fields
-    federal_state: Faker::Adress.state,
-    city:          Faker::Adress.city,
-    district:      'Central District'
-    public_area:   Faker::Adress.street
-    postcode:      Faker::Adress.postcode
+    federal_state: sample_adress[:federal_state],
+    city:          sample_adress[:city],
+    district:      sample_adress[:district],
+    public_area:   sample_adress[:public_area],
+    zipcode:       sample_adress[:zipcode],
   }
 ])
 
@@ -60,25 +64,25 @@ Client.multi_insert([
     full_name: 'Spinelli Racing',
     document_type:,
     document: CNPJ.generate,
-    phone: generate_phone_number,
+    phone: 1944445555,
     #Adress-related fields
-    federal_state: Faker::Adress.state,
-    city:          Faker::Adress.city,
-    district:      'Central District'
-    public_area:   Faker::Adress.street
-    postcode:      Faker::Adress.postcode
+    federal_state: sample_adress[:federal_state],
+    city:          sample_adress[:city],
+    district:      sample_adress[:district],
+    public_area:   sample_adress[:public_area],
+    zipcode:       sample_adress[:zipcode],
   }, 
   {
     full_name: 'Kazap Tecnologia',
     document_type:,
     document: CNPJ.generate,
-    phone: generate_phone_number,
+    phone: 1938415622,
     #Adress-related fields
-    federal_state: Faker::Adress.state,
-    city:          Faker::Adress.city,
-    district:      'Central District'
-    public_area:   Faker::Adress.street
-    postcode:      Faker::Adress.postcode
+    federal_state: sample_adress[:federal_state],
+    city:          sample_adress[:city],
+    district:      sample_adress[:district],
+    public_area:   sample_adress[:public_area],
+    zipcode:       sample_adress[:zipcode],
   }, 
 ])
 
