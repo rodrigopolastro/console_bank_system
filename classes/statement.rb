@@ -1,4 +1,5 @@
 require 'json'
+require 'csv'
 
 class Statement
   def initialize(account)
@@ -31,10 +32,10 @@ class Statement
       owner_name:,
       total_income:,
       total_outcome:,
-      deposits:,
-      withdrawals:,
-      transfers_made:,
-      transfers_received:
+      deposits: deposits_hashes,
+      withdrawals: withdrawals_hashes,
+      transfers_made: transfers_made_hashes,
+      transfers_received: transfers_received_hashes
     }
   
     Dir.mkdir("statements/json") unless Dir.exist?("statements/json")
@@ -45,55 +46,80 @@ class Statement
     return file_name
   end
 
+  def export_csv
+    #Current time formated in descending order for sorting purposes
+    time = Time.new
+    file_name = @account.number + '-' + time.strftime("%Y%m%d%H%M%S")
+
+    Dir.mkdir("statements/csv") unless Dir.exist?("statements/csv")
+    CSV.open("statements/csv/#{file_name}.csv", "wb") do |csv|
+      csv << ['Date', 'Transaction Type', 'Amount', 'Payment Method', 'Transfer From', 'Transfer To']
+      @account.deposits.each do |deposit|
+        csv << [deposit.created_at, 'Deposit', deposit.amount, ' - ', ' - ', ' - ']
+      end
+      @account.withdrawals.each do |withdrawal|
+        csv << [withdrawal.created_at, 'Withdrawal', withdrawal.amount, ' - ', ' - ', ' - ']
+      end
+      @account.transfers_made.each do |transfer_made|
+        csv << [transfer_made.created_at, 'Transfer Made', transfer_made.amount, transfer_made.payment_method, ' Me ', transfer_made.destination_account.client.full_name]
+      end
+      @account.transfers_received.each do |transfer_received|
+        csv << [transfer_received.created_at, 'Transfer Received', transfer_received.amount, transfer_received.payment_method, transfer_received.origin_account.client.full_name, ' Me ']
+      end
+    end
+
+    return file_name
+  end
+
   private 
 
-  def deposits
-    deposits = []
+  def deposits_hashes
+    deposits_hashes = []
     @account.deposits.each do |deposit| 
       deposit_hash = {
         amount: deposit.amount,
         date: deposit.created_at
       }
-      deposits << deposit_hash
+      deposits_hashes << deposit_hash
     end
-    return deposits
+    return deposits_hashes
   end
 
-  def withdrawals
-    withdrawals = []
+  def withdrawals_hashes
+    withdrawals_hashes = []
     @account.withdrawals.each do |withdrawal| 
       withdrawal_hash = {
         amount: withdrawal.amount,
         date: withdrawal.created_at
       }
-      withdrawals << withdrawal_hash
+      withdrawals_hashes << withdrawal_hash
     end
-    return withdrawals
+    return withdrawals_hashes
   end
   
-  def transfers_made
-    transfers_made = []
+  def transfers_made_hashes
+    transfers_made_hashes = []
     @account.transfers_made.each do |transfer_made| 
       transfer_made_hash = {
         transfer_to: transfer_made.destination_account.client.full_name,
         amount: transfer_made.amount,
         date: transfer_made.created_at
       }
-      transfers_made << transfer_made_hash
+      transfers_made_hashes << transfer_made_hash
     end
-    return transfers_made
+    return transfers_made_hashes
   end
   
-  def transfers_received
-    transfers_received = []
+  def transfers_received_hashes
+    transfers_received_hashes = []
     @account.transfers_received.each do |transfer_received| 
       transfer_received_hash = {
         transfer_from: transfer_received.origin_account.client.full_name,
         amount: transfer_received.amount,
         date: transfer_received.created_at
       }
-      transfers_received << transfer_received_hash
+      transfers_received_hashes << transfer_received_hash
     end
-    return transfers_received
+    return transfers_received_hashes
   end
 end
