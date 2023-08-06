@@ -24,13 +24,13 @@ SAMPLE_CNPJ = sample_cnpj
 
 # SAMPLE ADRESS
 SAMPLE_ADRESS = {
-  federal_state: 'XX',
-  city: 'Sample City',
-  district: 'Sample District',
-  public_area: 'Sample Public_area',
-  zipcode: '55555333'
+  federal_state: Faker::Address.state,
+  city:          Faker::Address.city,
+  district:      'Central District',
+  public_area:   Faker::Address.street_name,
+  postcode:      Faker::Address.postcode
 }
 
 # SAMPLE PHONE NUMBER
-SAMPLE_PHONE = '19911112222'
+SAMPLE_PHONE = generate_phone_number
 
