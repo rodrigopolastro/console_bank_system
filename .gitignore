@@ -5,3 +5,6 @@ irb_config.rb
 #Database file
 db/bank_system.db
 
+#Statements folder only exists locally
+statements
+

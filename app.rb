@@ -7,6 +7,7 @@ require_relative 'models/client'
 require_relative 'models/account'
 require_relative 'models/transfer'
 require_relative 'models/personal_transaction'
+require_relative 'classes/statement.rb'
 require_relative 'helpers/validate_answer'
 require_relative 'helpers/generate_account_number'
 
@@ -89,6 +90,8 @@ loop do
       end
     end
   end
+
+
 
   case option
   when 1 #LIST CLIENTS
@@ -325,29 +328,86 @@ loop do
       else 
         document = CNPJ.new(owner.document)
       end
-      personal_transactions = account.personal_transactions.take(10)
+      personal_transactions = account.personal_transactions
+      personal_transactions.sort_by{|transaction| transaction.created_at }.reverse!.take(10)
+
       transfers = account.transfers_made + account.transfers_received
-      transfers.sort_by!{|transfer| transfer.created_at}.take(10)
+      transfers.sort_by{|transfer| transfer.created_at}.reverse!.take(10)
       puts '-------------------------------'
       puts 'BANK OFICIAL STATEMENT'
+      puts '-------------------------------'
       puts "Account Name: #{account.name} - Number: #{format_account_number(account.number)}"
       puts "Owner: #{owner.full_name} - #{owner.document_type}: #{document.formatted}"
       puts "Creation date: #{account.created_at}"
       puts '-------------------------------'
-      puts "DEPOSITS AND WITHDRAWALS\n"
+      puts "DEPOSITS AND WITHDRAWALS (last 10)"
       personal_transactions.each do |transaction|
-        puts " -> #{transaction.created_at} - #{transaction.transaction_type.capitalize}"
-        puts "    Amount: R$#{transaction.amount}"
+        puts "\n -> #{transaction.transaction_type.capitalize} - #{transaction.created_at}"
+        if transaction.transaction_type == 'deposit'
+          puts "    Amount: +R$#{transaction.amount}"
+        else
+          puts "    Amount: -R$#{transaction.amount}"
+        end
       end
       puts '-------------------------------'
-      puts "TRANSFERS\n"
+      puts "TRANSFERS (last 10)"
       transfers.each do |transfer|
-        if transfer.origin_account == account
-          puts " -> #{transfer.created_at} - Transfer To #{transfer.destination_account.client.full_name}"
+        if account.transfers_made.include?(transfer)
+          puts "\n -> Transfer Made to #{transfer.destination_account.client.full_name} - #{transfer.created_at}"
+          puts "    Amount: -R$#{transfer.amount}"
         else
-          puts "    #{transfer.created_at} - Transfer From #{transfer.origin_account.client.full_name}"
+          puts "\n -> Transfer Received from #{transfer.destination_account.client.full_name} - #{transfer.created_at}"
+          puts "    Amount: +R$#{transfer.amount}"
         end
-        puts "    Amount: R$#{transfer.amount}"
+      end
+      all_transactions = personal_transactions + transfers
+      deposits    = personal_transactions.select{|t| t.transaction_type == 'deposit'}
+      withdrawals = personal_transactions.select{|t| t.transaction_type == 'withdrawal'}
+
+      deposits_amount    = deposits.sum{|d| d.amount}
+      withdrawals_amount = withdrawals.sum{|w| w.amount}
+      transfers_made_amount     = account.transfers_made.sum{|tm| tm.amount}
+      transfers_received_amount = account.transfers_received.sum{|tr| tr.amount}
+
+      income = deposits_amount + transfers_received_amount
+      outcome = withdrawals_amount + transfers_made_amount
+
+      oldest_transaction = all_transactions.sort_by{|t| t.created_at }.first
+      puts '-------------------------------'
+      puts "PERIOD SHOWED: All transactions since #{oldest_transaction.created_at})"
+      puts "\nPeriod Income:  +R$#{income}"
+      puts "Period Outcome: -R$#{outcome}"
+      former_balance = account.balance - income + outcome
+      puts "Former Balance:  R$#{former_balance}"
+      puts "Current Balance: R$#{account.balance}"
+      signal = account.balance - former_balance >= 0 ? '+' : ''
+      puts "Period Result:   R$#{signal}#{account.balance - former_balance}"
+      puts '-------------------------------'
+      puts 'To view all the transactions you need to export the statement.'
+      print 'Would you like to export the statement? [y/n] '
+      answer = gets.strip 
+
+      if affirmative?(answer)
+        puts 'Choose the desired export format'
+        puts '1. JSON'
+        puts '2. CSV'
+        print '-> '
+        export_format = gets.strip.to_i
+
+        case export_format
+        when 1 
+          statement = Statement.new(account)
+          file_name = statement.export_json
+          puts "JSON statement exported sucessfully!"
+          puts "Look up the statements/json folder for the file: #{file_name}.json"
+        when 2
+          # statement = Statement.new(account)
+          # file_name = statement.export_csv
+          # puts "CSV statement exported sucessfully!"
+          # puts "Look up the statements/csv folder for the file: #{file_name}.csv"
+        else
+          puts 'Invalid export format.'
+        end
       end
     end
   when 9 #MAKE DEPOSIT
@@ -498,7 +558,7 @@ loop do
           # client = Client.find(phone:)
           # break puts 'No client with given document.' if client.nil?          
         else 
-          puts 'Invalid PIX key type.'
+          break puts 'Invalid PIX key type.'
         end
       when 2
         puts 'ainda não dá pra fazer por TED.'
@@ -519,7 +579,7 @@ loop do
         #   account = Account.find(number:)
         #   break puts 'No account with given number' if account.nil?
       else
-        puts 'Invalid payment method.'
+        break puts 'Invalid payment method.'
       end
 
       print "\nTransfer value: "
