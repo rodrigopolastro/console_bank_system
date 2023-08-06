@@ -336,7 +336,7 @@ loop do
       puts '-------------------------------'
       puts 'BANK OFICIAL STATEMENT'
       puts '-------------------------------'
-      puts "Account Name: #{account.name} - Number: #{format_account_number(account.number)}"
+      puts "Account Name: #{account.name} - Number: #{format_account_number(number)}"
       puts "Owner: #{owner.full_name} - #{owner.document_type}: #{document.formatted}"
       puts "Creation date: #{account.created_at}"
       puts '-------------------------------'
@@ -401,10 +401,10 @@ loop do
           puts "JSON statement exported sucessfully!"
           puts "Look up the statements/json folder for the file: #{file_name}.json"
         when 2
-          # statement = Statement.new(account)
-          # file_name = statement.export_csv
-          # puts "CSV statement exported sucessfully!"
-          # puts "Look up the statements/csv folder for the file: #{file_name}.csv"
+          statement = Statement.new(account)
+          file_name = statement.export_csv
+          puts "CSV statement exported sucessfully!"
+          puts "Look up the statements/csv folder for the file: #{file_name}.csv"
         else
           puts 'Invalid export format.'
         end

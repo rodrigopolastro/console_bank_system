@@ -20,8 +20,8 @@ class Statement
     owner_document      = owner.document
     owner_name          = owner.full_name
 
-    total_income  = deposits_sum + transfers_received_sum
-    total_outcome = withdrawals_sum + transfers_made_sum
+    total_income  = @account.deposits_sum + @account.transfers_received_sum
+    total_outcome = @account.withdrawals_sum + @account.transfers_made_sum
   
     statement_values = {
       account_number:,
@@ -31,10 +31,10 @@ class Statement
       owner_name:,
       total_income:,
       total_outcome:,
-      deposits: deposits_hash_list,
-      withdrawals: withdrawals_hash_list,
-      transfers_made: transfers_made_hash_list,
-      transfers_received: transfers_received_hash_list
+      deposits:,
+      withdrawals:,
+      transfers_made:,
+      transfers_received:
     }
   
     Dir.mkdir("statements/json") unless Dir.exist?("statements/json")
@@ -47,63 +47,33 @@ class Statement
 
   private 
 
-  def deposits_objects
-    @account.personal_transactions.select{|t| t.transaction_type == 'deposit'}
-  end
-
-  def withdrawals_objects
-    @account.personal_transactions.select{|t| t.transaction_type == 'deposit'}
-  end
-
-  def transfers_made_objects
-    @account.transfers_made
-  end
-
-  def transfers_received_objects
-    @account.transfers_received
-  end
-
-  def deposits_sum
-    deposits_objects.sum{|d| d.amount}
-  end
-
-  def withdrawals_sum
-    withdrawals_objects.sum{|w| w.amount}
-  end
-
-  def transfers_made_sum
-    transfers_made_objects.sum{|tm| tm.amount}
-  end
-
-  def transfers_received_sum
-    transfers_received_objects.sum{|tr| tr.amount}
-  end
-
-  def deposits_hash_list
+  def deposits
     deposits = []
-    deposits_objects.each do |deposit_object| 
+    @account.deposits.each do |deposit| 
       deposit_hash = {
-        amount: deposit_object.amount,
-        date: deposit_object.created_at
+        amount: deposit.amount,
+        date: deposit.created_at
       }
       deposits << deposit_hash
     end
+    return deposits
   end
 
-  def withdrawals_hash_list
+  def withdrawals
     withdrawals = []
-    withdrawals_objects.each do |withdrawal_object| 
+    @account.withdrawals.each do |withdrawal| 
       withdrawal_hash = {
-        amount: withdrawal_object.amount,
-        date: withdrawal_object.created_at
+        amount: withdrawal.amount,
+        date: withdrawal.created_at
       }
       withdrawals << withdrawal_hash
     end
+    return withdrawals
   end
   
-  def transfers_made_hash_list
+  def transfers_made
     transfers_made = []
-    transfers_made_objects.each do |transfer_made| 
+    @account.transfers_made.each do |transfer_made| 
       transfer_made_hash = {
         transfer_to: transfer_made.destination_account.client.full_name,
         amount: transfer_made.amount,
@@ -111,11 +81,12 @@ class Statement
       }
       transfers_made << transfer_made_hash
     end
+    return transfers_made
   end
   
-  def transfers_received_hash_list
+  def transfers_received
     transfers_received = []
-    transfers_received_objects.each do |transfer_received| 
+    @account.transfers_received.each do |transfer_received| 
       transfer_received_hash = {
         transfer_from: transfer_received.origin_account.client.full_name,
         amount: transfer_received.amount,
@@ -123,5 +94,6 @@ class Statement
       }
       transfers_received << transfer_received_hash
     end
+    return transfers_received
   end
 end
