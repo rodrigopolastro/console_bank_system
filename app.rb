@@ -123,7 +123,7 @@ loop do
       print 'Phone number (only numbers): '
       client.phone = gets.strip
       print 'CEP (only numbers): '
-      client.zipcode = gets.strip
+      client.postcode = gets.strip
       print 'Federal State: '
       client.federal_state = gets.strip
       print 'City: '
@@ -138,7 +138,7 @@ loop do
       end
 
       if(GENERATE_SAMPLE_ADRESS)
-        client.zipcode       = SAMPLE_ADRESS[:zipcode]
+        client.postcode       = SAMPLE_ADRESS[:postcode]
         client.federal_state = SAMPLE_ADRESS[:federal_state]
         client.city          = SAMPLE_ADRESS[:city]
         client.district      = SAMPLE_ADRESS[:district]
@@ -560,11 +560,14 @@ loop do
           main_account = client.accounts.find{|account| account.name == 'Main Account'}
           transfer.destination_account_id = main_account.id 
         when 2
-          puts 'ainda não dá pra fazer por telefone.'
-          # print 'Enter the destination client phone (only numbers): '
-          # phone = gets.strip
-          # client = Client.find(phone:)
-          # break puts 'No client with given document.' if client.nil?          
+          print 'Enter the destination client phone (only numbers): '
+          phone = gets.strip
+          client = Client.find(phone:)
+          break puts 'No client with given document.' if client.nil?
+
+          #Select Main Account of the destination client
+          main_account = client.accounts.find{|account| account.name == 'Main Account'}
+          transfer.destination_account_id = main_account.id        
         else 
           break puts 'Invalid PIX key type.'
         end
