@@ -54,8 +54,7 @@ loop do
 
   case option
   when 1 #LIST CLIENTS
-    client = Client.new
-    client.list_clients
+    Client.list_clients
   when 2 #REGISTER CLIENT
     client = Client.new
 
@@ -155,10 +154,10 @@ loop do
       client.accounts.each do |account|
         puts " -> #{account.number.insert(4, '-')} - #{account.name}"
       end
-      #TO-DO: Validate account unique name for current client
-      #TO-DO: Validate account name -> cannot be 'Main Account'
+
       print "\nEnter the new account name: "
       name = gets.strip
+      break puts 'This client already has an account with this name.' if client.accounts.find{|account| account.name == name}
 
       puts "Confirm account creation?"
       print '(Press ENTER to confirm or type 0 to cancel) -> '
@@ -174,10 +173,10 @@ loop do
   when 5 #SHOW CURRENT BALANCE
     puts "ACCOUNT BALANCE (type 'list' to view registered accounts)"
     account = Account.find_or_list_accounts
-    number = account.number
 
     1.times do
       break puts 'No account with given number ' if account.nil?
+      system{"clear"}
 
       Account.show_account_balance(account)
       if account.balance < 0
@@ -188,7 +187,6 @@ loop do
   when 6 #EDIT ACCOUNT NAME
     puts "EDITING ACCOUNT (type 'list' to view registered accounts)"
     account = Account.find_or_list_accounts
-    number = account.number
     
     1.times do
       break puts 'No account with given number. ' if account.nil?
@@ -267,6 +265,7 @@ loop do
       puts "Creation date: #{account.created_at}"
       puts '-------------------------------'
       puts "DEPOSITS AND WITHDRAWALS (last 10)"
+      puts 'This account does not have deposits or withdrawals' if personal_transactions.empty? 
       personal_transactions.each do |transaction|
         puts "\n -> #{transaction.transaction_type.capitalize} - #{transaction.created_at}"
         if transaction.transaction_type == 'deposit'
@@ -277,6 +276,7 @@ loop do
       end
       puts '-------------------------------'
       puts "TRANSFERS (last 10)"
+      puts 'This account does not have deposits or withdrawals' if personal_transactions.empty?
       transfers.each do |transfer|
         if account.transfers_made.include?(transfer)
           puts "\n -> Transfer Made to #{transfer.destination_account.client.full_name} - #{transfer.created_at}"
@@ -287,6 +287,7 @@ loop do
         end
       end
       all_transactions = personal_transactions + transfers
+      break if all_transactions.empty?
       deposits    = personal_transactions.select{|t| t.transaction_type == 'deposit'}
       withdrawals = personal_transactions.select{|t| t.transaction_type == 'withdrawal'}
 
