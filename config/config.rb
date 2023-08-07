@@ -3,9 +3,9 @@
 # to pass through the input validations.
 
 ################################
-GENERATE_SAMPLE_DOCUMENT = true
-GENERATE_SAMPLE_PHONE    = true
-GENERATE_SAMPLE_ADRESS   = true
+GENERATE_SAMPLE_DOCUMENT = false
+GENERATE_SAMPLE_PHONE    = false
+GENERATE_SAMPLE_ADRESS   = false
 ################################
 
 # SAMPLE CPF

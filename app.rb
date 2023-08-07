@@ -42,10 +42,7 @@ loop do
   puts '| TRANSFERS                       |'
   puts '| 11. Make Transfer               |'
   puts '|---------------------------------|'
-  puts '| EXTRA: BANK ANALYSIS            |'
-  puts '| . Bank Statistics               |'
-  puts '|---------------------------------|'
-  puts '| 99. Exit                        |'
+  puts '| 12. Exit                        |'
   puts '-----------------------------------'
   print 'Enter the desired option number: '
   option = gets.strip.to_i
@@ -104,6 +101,14 @@ loop do
         client.public_area   = SAMPLE_ADRESS[:public_area]
       end
 
+      if GENERATE_SAMPLE_DOCUMENT && client.document_type == 'CPF'
+        client.document = SAMPLE_CPF
+      end
+
+      if GENERATE_SAMPLE_DOCUMENT && client.document_type == 'CNPJ'
+        client.document = SAMPLE_CNPJ
+      end
+
       puts "\nConfirm client creation?"
       print '(Press ENTER to confirm or type 0 to cancel) -> '
       answer = gets.strip
@@ -128,6 +133,12 @@ loop do
       account = Account.create(name: 'Main Account', balance: 0)
       client.add_account(account)
       account.update(number: generate_account_number(account))
+
+      if client.document_type == 'CPF'       
+        puts "\nNatural person '#{client.full_name}' (CPF: #{cpf.formatted}) created successfully!"
+      else      
+        puts "\nLegal person '#{client.full_name}' (CNPJ: #{cnpj.formatted}) created successfully!"
+      end
     end
   when 3 #LIST ALL ACCOUNTS
     Account.list_accounts
@@ -157,6 +168,7 @@ loop do
 
       print "\nEnter the new account name: "
       name = gets.strip
+      break puts 'The account must have a name.' if name.empty?
       break puts 'This client already has an account with this name.' if client.accounts.find{|account| account.name == name}
 
       puts "Confirm account creation?"
@@ -527,7 +539,7 @@ loop do
       puts "R$#{amount} transfered to '#{destination_account.name}' of '#{destination_account.client.full_name}'" 
       puts "\n'#{origin_account.name} of '#{origin_account.client.full_name}' CURRENT BALANCE: R$#{origin_account.balance}"
     end
-  when 99
+  when 12
     puts 'System shutting down...'
     break
   else
