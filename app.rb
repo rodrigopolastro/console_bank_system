@@ -14,7 +14,7 @@ require_relative 'helpers/validate_answer'
 require_relative 'helpers/generate_account_number'
 require_relative 'helpers/generate_phone_number'
 
-require_relative 'config/test_mode.rb'
+require_relative 'config/config.rb'
 day_simulator = DaySimulator.new
 loop do
   system("clear")
