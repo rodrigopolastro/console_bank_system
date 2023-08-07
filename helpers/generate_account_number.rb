@@ -26,8 +26,5 @@ def generate_account_number(account)
   account_number = leading_zeros(account.client_id) + leading_zeros(account.id)
 end
 
-def format_account_number(number)
-  number.insert(4, '-')
-end
 
 

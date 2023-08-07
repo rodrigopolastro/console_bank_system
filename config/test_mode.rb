@@ -1,12 +1,12 @@
-# >>> IMPORTANT <<<
-# In order to test the application quicker, feel free to set some of these
+# In order to test the application quicker, you can set some of these
 # constants as TRUE, so the script will auto-generate the specified values
-# and skip input validations.
+# to pass through the input validations.
+
+################################
 GENERATE_SAMPLE_DOCUMENT = true
 GENERATE_SAMPLE_PHONE    = true
 GENERATE_SAMPLE_ADRESS   = true
-
-# You can also modify the sample values if needed
+################################
 
 # SAMPLE CPF
 sample_cpf = CPF.generate
@@ -30,7 +30,4 @@ SAMPLE_ADRESS = {
   public_area:   Faker::Address.street_name,
   postcode:      Faker::Address.postcode
 }
-
-# SAMPLE PHONE NUMBER
-SAMPLE_PHONE = generate_phone_number
 

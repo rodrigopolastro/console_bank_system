@@ -9,39 +9,17 @@ require_relative 'models/account'
 require_relative 'models/transfer'
 require_relative 'models/personal_transaction'
 require_relative 'classes/statement.rb'
+require_relative 'classes/day_simulator.rb'
 require_relative 'helpers/validate_answer'
 require_relative 'helpers/generate_account_number'
 require_relative 'helpers/generate_phone_number'
 
-PERCENTAGE_FEE_VALUE = 0.23/100
-# DAY_DURATION = 60*60*24 => 24 hours in seconds
-# DAY_DURATION = 60*5 # => Default: 5 minutes
-DAY_DURATION_IN_SECONDS = 30 # => 10 seconds
-
-def update_overdraft_accounts
-  overdraft_accounts = Account.where{balance < 0}
-  overdraft_accounts.each do |account|
-    days_in_overdraft = account.days_in_overdraft + 1
-    balance = account.balance * (1 + PERCENTAGE_FEE_VALUE) # => * 1.0023
-    account.update(balance:, days_in_overdraft:)
-  end
-end 
-
-Thread.new do
-  loop do
-    sleep (DAY_DURATION_IN_SECONDS)
-    update_overdraft_accounts
-  end
-end
-
-def calculate_total_fee(account)
-  total_fee = (1 + PERCENTAGE_FEE_VALUE) ** account.days_in_overdraft
-  total_fee_percentage = (total_fee - 1) * 100
-end
-
 require_relative 'config/test_mode.rb'
+day_simulator = DaySimulator.new
 loop do
   system("clear")
+  puts "System Start Date: #{day_simulator.system_start}"
+  puts "System Next Day:   #{day_simulator.next_day}"
   puts '-----------------------------------'
   puts '| >>>>> CONSOLE BANK SYSTEM <<<<< |'
   puts '|---------------------------------|'
@@ -74,56 +52,10 @@ loop do
 
   system("clear")
 
-  def list_clients
-    puts 'NATURAL PERSONS'
-    natural_persons = Client.where(document_type: 'CPF').all
-
-    natural_persons.each do |natural_person|
-      cpf = CPF.new(natural_person.document)
-      #TO-DO: set a 50 length space (max size name) here to display cpfs aligned
-      puts "#{natural_person.full_name} - CPF: #{cpf.formatted}"
-    end
-    puts '-------------------------------'
-    puts 'LEGAL PERSONS'
-    legal_persons   = Client.where(document_type: 'CNPJ').all
-
-    legal_persons.each do |legal_person|
-      cnpj = CNPJ.new(legal_person.document)
-      puts "#{legal_person.full_name} - CNPJ: #{cnpj.formatted}"
-    end
-  end
-
-  def list_accounts
-    puts 'NATURAL PERSONS ACCOUNTS'
-    natural_persons = Client.where(document_type: 'CPF').all
-
-    natural_persons.each do |natural_person|
-      cpf = CPF.new(natural_person.document)
-      puts "\n#{natural_person.full_name} - CPF: #{cpf.formatted}"
-
-      natural_person.accounts.each do |account|
-        puts " -> #{format_account_number(account.number)} - #{account.name}"
-      end
-    end
-    puts '-------------------------------'
-    puts 'LEGAL PERSONS ACCOUNTS'
-    legal_persons   = Client.where(document_type: 'CNPJ').all
-
-    legal_persons.each do |legal_person|
-      cnpj = CNPJ.new(legal_person.document)
-      puts "\n#{legal_person.full_name} - CNPJ: #{cnpj.formatted}"
-
-      legal_person.accounts.each do |account|
-        puts " -> #{format_account_number(account.number)} - #{account.name}"
-      end
-    end
-  end
-
-
-
   case option
   when 1 #LIST CLIENTS
-    list_clients
+    client = Client.new
+    client.list_clients
   when 2 #REGISTER CLIENT
     client = Client.new
 
@@ -162,7 +94,7 @@ loop do
       client.public_area = gets.strip
 
       if(GENERATE_SAMPLE_PHONE)
-        client.phone = SAMPLE_PHONE
+        client.phone = generate_phone_number
       end
 
       if(GENERATE_SAMPLE_ADRESS)
@@ -199,7 +131,7 @@ loop do
       account.update(number: generate_account_number(account))
     end
   when 3 #LIST ALL ACCOUNTS
-    list_accounts
+    Account.list_accounts
   when 4 #CREATE NEW ACCOUNT
     client = Client.new
 
@@ -208,7 +140,7 @@ loop do
     document = gets.strip.downcase
     if document == 'list'
       puts '-------------------------------'
-      list_clients
+      client.list_clients
       puts '-------------------------------'
       print "\nEnter the client CPF or CNPJ (only numbers): "
       document = gets.strip
@@ -221,7 +153,7 @@ loop do
 
       puts "Accounts of '#{client.full_name}'"
       client.accounts.each do |account|
-        puts " -> #{format_account_number(account.number)} - #{account.name}"
+        puts " -> #{account.number.insert(4, '-')} - #{account.name}"
       end
       #TO-DO: Validate account unique name for current client
       #TO-DO: Validate account name -> cannot be 'Main Account'
@@ -237,52 +169,32 @@ loop do
       client.add_account(account)
       account.update(number: generate_account_number(account))
 
-      puts "\nAccount '#{account.name}' (number: #{format_account_number(account.number)}) created sucessfully!"
+      puts "\nAccount '#{account.name}' (number: #{account.number.insert(4, '-')}) created sucessfully!"
     end
   when 5 #SHOW CURRENT BALANCE
     puts "ACCOUNT BALANCE (type 'list' to view registered accounts)"
-    print 'Enter the account number (only numbers): '
-    number = gets.strip.downcase
-    if number == 'list'
-      puts '-------------------------------'
-      list_accounts
-      puts '-------------------------------'
-      print "Enter the account number (only numbers): "
-      number = gets.strip
-    end
-
-    account = Account.find(number:)
+    account = Account.find_or_list_accounts
+    number = account.number
 
     1.times do
       break puts 'No account with given number ' if account.nil?
 
-      puts "Account #{format_account_number(account.number)} - #{account.name} of #{account.client.full_name}"
-        puts "BALANCE: R$#{account.balance}"
+      Account.show_account_balance(account)
       if account.balance < 0
         puts "Days in overdraft: #{account.days_in_overdraft}"
-        puts "Total Fee: #{calculate_total_fee(account).round(2)}%"
+        puts "Total Fee: #{total_fee_percentage(account).round(2)}%"
       end
     end
   when 6 #EDIT ACCOUNT NAME
     puts "EDITING ACCOUNT (type 'list' to view registered accounts)"
-    print 'Enter the account number (only numbers): '
-    number = gets.strip.downcase
-    if number == 'list'
-      puts '-------------------------------'
-      list_accounts
-      puts '-------------------------------'
-      print "Enter the account number (only numbers): "
-      number = gets.strip
-    end
-
-    account = Account.find(number:)
+    account = Account.find_or_list_accounts
+    number = account.number
     
     1.times do
       break puts 'No account with given number. ' if account.nil?
       break puts "A client's Main Account cannot be renamed." if account.name == 'Main Account'
       
-      puts "Account #{format_account_number(number)} - #{account.name} of #{account.client.full_name}"
-      puts "BALANCE: R$#{account.balance}"
+      Account.show_account_balance(account)
       print "\nNew account name: "
       account.name = gets.strip
 
@@ -293,32 +205,23 @@ loop do
 
       #TO-DO: Validate if's a number
       #TO-DO: Validate account unique name for current client
+      account.number.delete!("-")
       account.save
       puts "Account updated successfully!"
     end
   when 7 #DELETE ACCOUNT
     puts "DELETING ACCOUNT (type 'list' to view registered accounts)"
-    print 'Enter the account number (only numbers): '
-    number = gets.strip.downcase
-    if number == 'list'
-      puts '-------------------------------'
-      list_accounts
-      puts '-------------------------------'
-      print "Enter the account number (only numbers): "
-      number = gets.strip
-    end
-
-    account = Account.find(number:)
+    account = Account.find_or_list_accounts
+    number = account.number
     
     1.times do
       break puts 'No account with given number ' if account.nil?
       break puts "A client's Main Account cannot be deleted" if account.name == 'Main Account'
       
-      puts "Account #{format_account_number(number)} - #{account.name} of #{account.client.full_name}"
-      puts "BALANCE: R$#{account.balance}"
+      Account.show_account_balance(account)
 
       puts "\nDeleting this account will transfer all of its balance to #{account.client.full_name}'s Main Account."
-      puts "Confirm account edition? (Press ENTER to confirm or type 0 to cancel)"
+      puts "Confirm account deletion? (Press ENTER to confirm or type 0 to cancel)"
       print ' -> '
       answer = gets.strip
       break puts 'Deletion canceled' if answer == '0'
@@ -339,17 +242,8 @@ loop do
     end
   when 8 #GENERATE STATEMENT
     puts "GENERATING STATEMENT (type 'list' to view registered accounts)"
-    print 'Enter the account number (only numbers): '
-    number = gets.strip.downcase
-    if number == 'list'
-      puts '-------------------------------'
-      list_accounts
-      puts '-------------------------------'
-      print "Enter the account number (only numbers): "
-      number = gets.strip
-    end
-    
-    account = Account.find(number:)
+    account = Account.find_or_list_accounts
+    number = account.number
     
     1.times do
       break puts 'No account with given number ' if account.nil?
@@ -368,7 +262,7 @@ loop do
       puts '-------------------------------'
       puts 'BANK OFICIAL STATEMENT'
       puts '-------------------------------'
-      puts "Account Name: #{account.name} - Number: #{format_account_number(number)}"
+      puts "Account Name: #{account.name} - Number: #{number.insert(4, '-')}"
       puts "Owner: #{owner.full_name} - #{owner.document_type}: #{document.formatted}"
       puts "Creation date: #{account.created_at}"
       puts '-------------------------------'
@@ -455,24 +349,15 @@ loop do
     personal_transaction.transaction_type = 'deposit'
 
     puts "MAKING DEPOSIT (type 'list' to view registered accounts)"
-    print 'Enter the account number (only numbers): '
-    number = gets.strip.downcase
-    if number == 'list'
-      puts '-------------------------------'
-      list_accounts
-      puts '-------------------------------'
-      print "Enter the account number (only numbers): "
-      number = gets.strip
-    end
-
-    account = Account.find(number:)
+    account = Account.find_or_list_accounts
+    number = account.number
     
     1.times do
       break puts 'No account with given number. ' if account.nil?
       system("clear")
       
       personal_transaction.account_id = account.id
-      puts "Account #{format_account_number(number)} - #{account.name} of #{account.client.full_name}"
+      puts "Account #{number.insert(4, '-')} - #{account.name} of #{account.client.full_name}"
       puts "BALANCE: R$#{account.balance}"
       print "\nDeposit value: "
       amount = gets.strip.to_f
@@ -495,17 +380,8 @@ loop do
     end
   when 10 #MAKE WITHDRAWAL
     puts "MAKING WITHDRAWAL (type 'list' to view registered accounts)"
-    print 'Enter the account number (only numbers): '
-    number = gets.strip.downcase
-    if number == 'list'
-      puts '-------------------------------'
-      list_accounts
-      puts '-------------------------------'
-      print "Enter the account number (only numbers): "
-      number = gets.strip
-    end
-
-    account = Account.find(number:)
+    account = Account.find_or_list_accounts
+    number = account.number
     
     1.times do
       personal_transaction = PersonalTransaction.new
@@ -513,7 +389,7 @@ loop do
       break puts 'No account with given number. ' if account.nil?
       
       personal_transaction.account_id = account.id
-      puts "Account #{format_account_number(number)} - #{account.name} of #{account.client.full_name}"
+      puts "Account #{number.insert(4, '-')} - #{account.name} of #{account.client.full_name}"
       puts "BALANCE: R$#{account.balance}"
       print "\nWithdrawal value: "
       amount = gets.strip.to_f
@@ -541,17 +417,10 @@ loop do
     end
   when 11 #MAKE TRANSFER
     puts "MAKING TRANSFER (type 'list' to view registered accounts)"
-    print 'Enter the origin account number (only numbers): '
-    origin_number = gets.strip.downcase
-    if origin_number == 'list'
-      puts '-------------------------------'
-      list_accounts
-      puts '-------------------------------'
-      print "Enter the origin account number (only numbers): "
-      origin_number = gets.strip
-    end
-
-    origin_account = Account.find(number: origin_number)
+    puts 'ORIGIN ACCOUNT'
+    account = Account.find_or_list_accounts
+    number = account.number
+    origin_account = account
     
     1.times do
       break puts 'No account with given number.' if origin_account.nil?
@@ -562,7 +431,7 @@ loop do
       system("clear")
       puts '-------------------------------'
       puts 'ORIGIN ACCOUNT'
-      puts "Account #{format_account_number(origin_number)} - #{origin_account.name} of #{origin_account.client.full_name}"
+      puts "Account #{number.insert(4, '-')} - #{origin_account.name} of #{origin_account.client.full_name}"
       puts "BALANCE: R$#{origin_account.balance}"
       puts '-------------------------------'
       puts 'PAYMENT METHOD'
@@ -663,7 +532,8 @@ loop do
   else
     puts 'Invalid option.'
   end
-  print "\nPress ENTER to return..."
+  puts "\n==============================="
+  print "Press ENTER to return..."
   waiting_variable = gets
 end
 
